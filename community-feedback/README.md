@@ -1,4 +1,4 @@
-# AI Dungeon Master for Dungeons & Dragons
+# Community Feedback Agent
 
 ## Introduction
 This project is an example using the Julep Platform to make an Community Feedback Bot for your Discourse Communities. Julep allows stateful interaction as well as function calling between the user and the agent automatically
