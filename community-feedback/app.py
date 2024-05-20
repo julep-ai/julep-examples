@@ -1,6 +1,5 @@
 # %%
 import requests
-import aiohttp
 import os
 from dotenv import find_dotenv, load_dotenv
 from typing import Literal
@@ -36,7 +35,7 @@ def create_agent():
         name="Archy",
         about="An agent that posts and comments on Discourse forums by filtering for the provided topic",
         instructions=INSTRUCTIONS,
-        model="gpt-4",
+        model="gpt-4-turbo",
         default_settings={
             "temperature": 0.5,
             "top_p": 1,
@@ -85,9 +84,9 @@ def retrieve_user():
 
 def create_user():
     user = client.users.create(
-        name="Sid",
+        name="Anon",
         about="A product manager at OpenAI, working with Archy to validate and improve the product",
-        metadata={"name": "Sid"},
+        metadata={"name": "Anon"},
     )
     return user
 
@@ -107,6 +106,12 @@ def chat_start():
     print(f"Agent: {agent.id}")
     print(f"Session: {session.id}")
     print(f"User: {user.id}")
+
+
+@cl.on_chat_end
+def chat_end():
+    session_id = cl.user_session.get("session_id")
+    client.sessions.delete_history(session_id=session_id)
 
 
 @cl.on_message
@@ -133,19 +138,18 @@ async def on_message(message: cl.Message):
             posts = await search(**args)
             tool_response = client.sessions.chat(
                 session_id=session_id,
-                # messages=[{"role": "assistant", "content": json.dumps(posts)}],
-                messages=[{"role": "function", "name": "search_forum", "content": json.dumps(posts)}],
+                messages=[{"role": "assistant", "content": json.dumps(posts)}],
                 recall=True,
                 remember=True,
             )
             await cl.Message(content=tool_response.response[0][0].content).send()
+            read_post
         elif tool == "read_post":
             pprint(tool_call)
             post = await read_post(**args)
             tool_response = client.sessions.chat(
                 session_id=session_id,
-                # messages=[{"role": "assistant", "content": json.dumps(post)}],
-                messages=[{"role": "function", "name": "read_post", "content": json.dumps(posts)}],
+                messages=[{"role": "assistant", "content": json.dumps(post)}],
                 recall=True,
                 remember=True
             )
@@ -183,7 +187,6 @@ async def search(
     )
     filtered_posts = {"posts": []}
     posts = res.json()
-    # await parse_search_results(res.json())
     for post in posts.get("posts", []):
         filtered_post = {
             key: post[key] for key in ["id", "blurb", "like_count", "username"] if key in post
