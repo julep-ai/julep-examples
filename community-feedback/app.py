@@ -10,6 +10,7 @@ from tools import tools
 from julep import Client
 import json
 from pprint import pprint
+from chainlit.types import ThreadDict
 
 load_dotenv(".env")
 api_key = os.environ.get("JULEP_API_KEY")
@@ -46,7 +47,6 @@ def create_agent():
         },
         metadata={"name": "Archy"},
         tools=tools,
-        max_tokens=8192
     )
     return agent
 
@@ -86,7 +86,7 @@ def retrieve_user():
 def create_user():
     user = client.users.create(
         name="Sid",
-        about="A product engineer at Acme, working with Archy to validate and improve the product",
+        about="A product manager at OpenAI, working with Archy to validate and improve the product",
         metadata={"name": "Sid"},
     )
     return user
@@ -115,6 +115,7 @@ async def on_message(message: cl.Message):
     response = client.sessions.chat(
         session_id=session_id,
         messages=[{"role": "user", "content": message.content}],
+        max_tokens=4096,
         recall=True,
         remember=True,
     )
@@ -132,7 +133,8 @@ async def on_message(message: cl.Message):
             posts = await search(**args)
             tool_response = client.sessions.chat(
                 session_id=session_id,
-                messages=[{"role": "assistant", "content": json.dumps(posts)}],
+                # messages=[{"role": "assistant", "content": json.dumps(posts)}],
+                messages=[{"role": "function", "name": "search_forum", "content": json.dumps(posts)}],
                 recall=True,
                 remember=True,
             )
@@ -142,7 +144,8 @@ async def on_message(message: cl.Message):
             post = await read_post(**args)
             tool_response = client.sessions.chat(
                 session_id=session_id,
-                messages=[{"role": "assistant", "content": json.dumps(post)}],
+                # messages=[{"role": "assistant", "content": json.dumps(post)}],
+                messages=[{"role": "function", "name": "read_post", "content": json.dumps(posts)}],
                 recall=True,
                 remember=True
             )
@@ -189,25 +192,3 @@ async def search(
         filtered_posts["posts"].append(filtered_post)
     return filtered_posts
 
-
-#####
-# - it will extensively ask what you exactly you need to search for
-# - it will extensively ask what you exactly need to post about
-# - comes up with good keywords and filters
-# - gets approval from user (advanced) and corrects the filters
-# - searches for posts with the filter.
-# - compiles a list of viable posts to read
-# - reads each post and comes up with a viable response to it
-# - gives the post + response to the user
-# - posts the response to the post
-#####
-
-
-####
-# THOUGHTS
-# - prototyping prompts is harder because constantly updating or deleting/creating a new agent/session is annoying
-# - need to create an agent/session for each prompt and then test it
-# - either keep updating the agent/session or create a new one for each prompt and delete the older
-####
-
-# %%
